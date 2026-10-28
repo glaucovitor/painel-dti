@@ -1,0 +1,6 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Planilha não encontrada</title>
+<body style="font-family:Segoe UI,Arial;padding:40px">
+<h2>Planilha não encontrada</h2>
+<p>Coloque o arquivo em <code>{{ caminho }}</code> ou envie abaixo.</p>
+<form method="post" action="{{ url_for('atualizar') }}" enctype="multipart/form-data">
+<input type="file" name="planilha" accept=".xlsx"> <button>Enviar</button></form></body></html>

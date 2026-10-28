@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block conteudo %}
+<section class="kpis" id="kpis"></section>
+
+<section class="cartao" id="cNuvem">
+  <h2>Objetivos das Oficinas Colaborativas</h2>
+  <div id="nuvem"><canvas></canvas></div>
+</section>
+
+<section class="cartao" id="cMapa">
+  <h2>Total de Dias de Oficina por Serviço Estruturante</h2>
+  <div class="grafico" id="treemap"></div>
+</section>
+
+<section class="cartao" id="cFrentes">
+  <h2>Entregas por Frentes de Trabalho</h2>
+  <div class="rolagem"><div id="gFrentes"></div></div>
+</section>
+
+<section class="cartao" id="cAtividades">
+  <h2>Entregas por Atividade</h2>
+  <div class="rolagem"><div id="gAtividades"></div></div>
+</section>
+{% endblock %}
+
+{% block script %}
+<script src="{{ url_for('static', filename='vendor/wordcloud2.js') }}"></script>
+<script>
+const D = window.DADOS;
+const PALETA = ["#118dff", "#12239e", "#e66c37", "#6b007b", "#e044a7", "#744ec2", "#d9b300", "#d64550", "#197278", "#1aab40", "#15c6f4"];
+const of = D.oficinas, en = D.entregas;
+
+kpis(document.getElementById("kpis"), [
+  [fmt(en.length), "Entregas Realizadas"],
+  [fmt(of.length), "Oficinas Colaborativas"],
+  [fmt(new Set(en.map(e => e.frente).filter(Boolean)).size), "Frentes de Trabalho"],
+  [fmt(new Set(of.map(o => o.servico).filter(Boolean)).size), "Serviços Atendidos"],
+  [fmt(new Set(en.map(e => e.atividade).filter(Boolean)).size), "Atividades Desenvol."],
+  [fmt(soma(of, o => o.teasers)), "Teasers Produzidos"],
+  [fmt(soma(of, o => o.prototipos)), "Protótipos Desenvol."],
+  [fmt(soma(of, o => o.testes)), "Testes com Usuários"],
+]);
+
+/* nuvem de palavras */
+function desenharNuvem() {
+  const box = document.getElementById("nuvem"), cv = box.querySelector("canvas");
+  const r = window.devicePixelRatio || 1;
+  cv.width = box.clientWidth * r; cv.height = box.clientHeight * r;
+  cv.style.width = box.clientWidth + "px"; cv.style.height = box.clientHeight + "px";
+  if (!D.nuvem.length) return;
+  const max = D.nuvem[0][1];
+  const base = Math.min(box.clientWidth / 12, box.clientHeight / 4.2) * r;
+  let i = 0;
+  WordCloud(cv, {
+    list: D.nuvem,
+    weightFactor: n => Math.max(7 * r, base * Math.pow(n / max, 0.75)),
+    fontFamily: FONTE, color: () => PALETA[(i++) % PALETA.length],
+    rotateRatio: 0, gridSize: Math.round(3 * r), shrinkToFit: true, drawOutOfBound: false,
+    backgroundColor: "#fff", shuffle: false,
+    hover: null, click: null,
+  });
+}
+
+/* treemap */
+function desenharTreemap() {
+  const m = new Map();
+  of.forEach(o => { if (o.dias) { const k = o.servico || VAZIO; m.set(k, (m.get(k) || 0) + o.dias); } });
+  const pares = ordenarDesc(m);
+  Plotly.react("treemap", [{
+    type: "treemap",
+    labels: pares.map(p => p[0]), parents: pares.map(() => ""), values: pares.map(p => p[1]),
+    marker: { colors: pares.map((_, i) => PALETA[i % PALETA.length]), line: { color: "#fff", width: 2 }, pad: { t: 0, l: 0, r: 0, b: 0 } },
+    texttemplate: "%{label}<br><br>%{value}", textposition: "top left",
+    textfont: { family: FONTE, color: "#fff", size: 14 },
+    hovertemplate: "%{label}<br><b>%{value} dias</b><extra></extra>",
+    tiling: { packing: "squarify", pad: 0 }, sort: true,
+  }], { margin: { l: 0, r: 0, t: 0, b: 0 }, paper_bgcolor: "#fff" }, CONFIG);
+}
+
+barraH(document.getElementById("gFrentes"), ordenarDesc(contar(en, e => e.frente)),
+  { margemEsq: 250, nChars: 34, altBarra: 30.5 });
+barraH(document.getElementById("gAtividades"), ordenarDesc(contar(en, e => e.atividade)),
+  { margemEsq: 210, nChars: 26, altBarra: 51.5, espessura: 0.68, fonteRotulo: 14 });
+
+desenharNuvem(); desenharTreemap();
+let t; window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(desenharNuvem, 200); });
+</script>
+{% endblock %}

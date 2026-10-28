@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block conteudo %}
+<section class="kpi" id="kpi"></section>
+
+<section class="cartao" id="cSlicerAtiv">
+  <h2 style="font-size:16px">Atividades.Atividade <span class="limpar" id="limpar">limpar seleção</span></h2>
+  <div class="slicer" id="slicer"></div>
+</section>
+
+<section class="cartao" id="cAtivFrentes">
+  <h2>Atividades por Frentes de Trabalho</h2>
+  <div class="rolagem"><div id="gFrentes"></div></div>
+</section>
+
+<section class="cartao" id="cAtivBarra">
+  <h2>Entregas por Atividade</h2>
+  <div class="rolagem"><div id="gAtiv"></div></div>
+</section>
+
+<section class="cartao" id="cAtivTabela">
+  <h3>DETALHAMENTO DAS ENTREGAS REALIZADAS</h3>
+  <div class="tabela-wrap" id="tab"></div>
+</section>
+{% endblock %}
+
+{% block script %}
+<script>
+const D = window.DADOS;
+const tab = tabela(document.getElementById("tab"), [
+  { campo: "atividade", titulo: "Atividade", largura: "180px" },
+  { campo: "descricao", titulo: "Descrição" },
+  { campo: "link", titulo: "Link", tipo: "link", largura: "260px" },
+], { campo: "atividade", dir: 1 });
+
+let sl;
+function atualizar(sel) {
+  const en = D.entregas.filter(e => passa(sel, e.atividade));
+  const k = document.getElementById("kpi");
+  k.innerHTML = `<div class="valor">${fmt(new Set(en.map(e => e.atividade).filter(Boolean)).size)}</div><div class="legenda">Atividades Desenvolvidas</div>`;
+
+  const porAtiv = ordenarDesc(contar(D.entregas, e => e.atividade));
+  barraH(document.getElementById("gAtiv"), porAtiv, {
+    margemEsq: 270, nChars: 40, altBarra: 24, eixoX: true, titX: "Entregas", titY: "Atividade", dtick: 5,
+    selecionados: sel, onClick: v => sl.alternar(v),
+  });
+  barraH(document.getElementById("gFrentes"), ordenarDesc(contar(en, e => e.frente)), {
+    margemEsq: 120, nChars: 11, altBarra: 24, eixoX: true, titX: "Atividades", titY: "Frentes de Trabalho", dtick: 10,
+  });
+  tab.atualizar(en);
+}
+sl = slicer(document.getElementById("slicer"), unicos(D.entregas, e => e.atividade, D.atividades_lista),
+  atualizar, document.getElementById("limpar"));
+atualizar(new Set());
+</script>
+{% endblock %}

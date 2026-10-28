@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Indicadores do Projeto</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/painel.css') }}">
+<script src="{{ url_for('static', filename='vendor/plotly.min.js') }}"></script>
+</head>
+<body>
+<div class="painel">
+
+  <header class="topo">
+    <h1>Indicadores do Projeto</h1>
+    <div class="atualizacao">
+      <strong>{{ atualizado_em }}</strong>
+      <span>Última Atualização</span>
+      {% if link %}
+      <form method="post" action="{{ url_for('sincronizar') }}">
+        <button class="btn-upload" title="Baixar agora a versão mais recente do SharePoint">Buscar dados agora</button>
+      </form>
+      {% if erro_link %}<span class="aviso-link" title="{{ erro_link }}">⚠ usando cópia local: link indisponível</span>{% endif %}
+      {% else %}
+      <form method="post" action="{{ url_for('atualizar') }}" enctype="multipart/form-data" id="formUpload">
+        <label class="btn-upload" title="Enviar nova versão da planilha">
+          Atualizar planilha
+          <input type="file" name="planilha" accept=".xlsx" onchange="this.form.submit()">
+        </label>
+      </form>
+      {% endif %}
+    </div>
+  </header>
+
+  <nav class="menu">
+    <div class="trilho"></div>
+    {% for rota, rotulo, icone in paginas %}
+    <a href="{{ url_for(rota) }}" class="item{% if pagina == rota %} ativo{% endif %}">
+      <span class="circulo">{% include 'icones/' ~ icone ~ '.svg' %}</span>
+      <span class="rotulo">{{ rotulo }}</span>
+    </a>
+    {% endfor %}
+  </nav>
+
+  <main class="conteudo {{ pagina }}">
+    {% block conteudo %}{% endblock %}
+  </main>
+
+  <footer class="rodape">
+    {% for l in logos %}
+      {% if loop.index == 3 %}<span class="parceria">Em parceria com:</span>{% endif %}
+      {% if l.arquivo %}
+        <img class="logo-img-{{ loop.index }}" src="{{ url_for('static', filename='img/' ~ l.arquivo) }}" alt="{{ l.texto }}">
+      {% else %}
+        <span class="logo-texto logo-{{ loop.index }}">{{ l.texto }}</span>
+      {% endif %}
+    {% endfor %}
+  </footer>
+</div>
+
+<script>window.DADOS = {{ dados | tojson }};</script>
+<script src="{{ url_for('static', filename='js/painel.js') }}"></script>
+{% block script %}{% endblock %}
+</body>
+</html>

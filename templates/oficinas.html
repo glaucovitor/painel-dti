@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block conteudo %}
+<section class="kpis" id="kpis"></section>
+
+<section class="cartao" id="cSlicerServico">
+  <h2>Serviço Estruturante <span class="limpar" id="limpar">limpar seleção</span></h2>
+  <div class="slicer" id="slicer"></div>
+</section>
+
+<section class="cartao" id="cPizza">
+  <h2>Formato por Oficina</h2>
+  <div class="grafico" id="pizza"></div>
+</section>
+
+<section class="cartao" id="cTabOficinas">
+  <h3>DETALHAMENTO DAS OFICINAS REALIZADAS</h3>
+  <div class="tabela-wrap" id="tabOficinas"></div>
+</section>
+
+<section class="cartao" id="cTabEntregasOf">
+  <h3>ENTREGAS POR OFICINAS</h3>
+  <div class="tabela-wrap" id="tabEntregasOf"></div>
+</section>
+{% endblock %}
+
+{% block script %}
+<script>
+const D = window.DADOS;
+const CORES_FORMATO = { "Remoto": COR.azul, "Presencial": COR.escuro, "Hibrida": COR.laranja, "Híbrida": COR.laranja };
+const ORDEM_FORMATO = ["Remoto", "Presencial", "Hibrida", "Híbrida"];
+
+const tOf = tabela(document.getElementById("tabOficinas"), [
+  { campo: "id", titulo: "ID", largura: "48px" },
+  { campo: "nome", titulo: "Oficina Realizada", largura: "150px" },
+  { campo: "objetivos", titulo: "Objetivos" },
+  { campo: "data", titulo: "Data de Realização", largura: "105px", ordenarPor: "ordem" },
+  { campo: "formato", titulo: "Formato", largura: "70px" },
+  { campo: "servico", titulo: "Serviço estruturante", largura: "98px" },
+  { campo: "participantes", titulo: "Qtde de Participantes", tipo: "num", largura: "100px" },
+], { campo: "data", dir: -1 });
+
+const tEO = tabela(document.getElementById("tabEntregasOf"), [
+  { campo: "id_oficina", titulo: "ID_Oficina", largura: "86px" },
+  { campo: "oficina", titulo: "Oficina Realizada", largura: "178px" },
+  { campo: "descricao", titulo: "Descrição" },
+  { campo: "link", titulo: "Link", tipo: "link", largura: "170px" },
+], { campo: "id_oficina", dir: -1 });
+
+function atualizar(sel) {
+  const of = D.oficinas.filter(o => passa(sel, o.servico));
+  const eo = D.entregas_oficinas.filter(e => passa(sel, e.servico));
+
+  kpis(document.getElementById("kpis"), [
+    [fmt(of.length), "Oficinas Colaborativas Realizadas"],
+    [fmt(media(of, o => o.participantes), 2), "Média de Participantes"],
+    [fmt(media(of, o => o.dias), 2), "Média de Dias da Oficinas"],
+    [fmt(media(of, o => o.horas), 2), "Média de Horas das Oficinas"],
+  ]);
+
+  const m = contar(of, o => o.formato);
+  const fs = [...m.keys()].sort((a, b) => (ORDEM_FORMATO.indexOf(a) + 99) % 99 - (ORDEM_FORMATO.indexOf(b) + 99) % 99);
+  Plotly.react("pizza", [{
+    type: "pie", labels: fs, values: fs.map(f => m.get(f)), sort: false, direction: "clockwise", rotation: 0,
+    marker: { colors: fs.map(f => CORES_FORMATO[f] || "#999") },
+    textinfo: "percent", textposition: "outside", texttemplate: "%{percent:.2%}",
+    textfont: { size: 13, color: COR.suave },
+    hovertemplate: "%{label}<br><b>%{value}</b> oficinas (%{percent:.2%})<extra></extra>",
+    automargin: true,
+  }], {
+    margin: { l: 20, r: 10, t: 10, b: 10 },
+    font: { family: FONTE, color: COR.suave },
+    separators: ",.",
+    legend: { title: { text: "<b>Oficina</b>", font: { size: 14, color: COR.texto } }, font: { size: 14 }, x: 1, y: .85 },
+    paper_bgcolor: "#fff",
+  }, CONFIG);
+
+  tOf.atualizar(of);
+  tEO.atualizar(eo);
+}
+
+slicer(document.getElementById("slicer"), unicos(D.oficinas, o => o.servico), atualizar, document.getElementById("limpar"));
+atualizar(new Set());
+</script>
+{% endblock %}

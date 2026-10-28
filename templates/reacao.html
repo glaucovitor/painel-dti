@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block conteudo %}
+<section class="cartao">
+  <div class="cabecalho">
+    <h2>Percepção dos participantes sobre as oficinas</h2>
+    <div class="kpi-plano"><div class="valor" id="nResp"></div><div class="legenda">Qtde Respondentes</div></div>
+  </div>
+  <h4>Qtde Respostas por Questao e Escala Legenda</h4>
+  <div class="legenda-escala" id="legenda"></div>
+  <div class="grafico" id="grafico"></div>
+</section>
+{% endblock %}
+
+{% block script %}
+<script>
+const R = window.DADOS.reacao;
+const ESCALA = {
+  1: ["1 - Discordo totalmente", "#d64550"],
+  2: ["2 - Discordo parcialmente", COR.laranja],
+  3: ["3 - Neutro", "#d9b300"],
+  4: ["4 - Concordo parcialmente", COR.azul],
+  5: ["5 - Concordo totalmente", COR.escuro],
+};
+const qs = [...R.questoes].sort((a, b) => a.localeCompare(b, "pt-BR"));
+document.getElementById("nResp").textContent = fmt(R.respostas.length);
+
+const presentes = [1, 2, 3, 4, 5].filter(n => R.respostas.some(r => Object.values(r.notas).includes(n)));
+document.getElementById("legenda").innerHTML = "<b>Escala Legenda</b>" +
+  presentes.map(n => `<span><i style="background:${ESCALA[n][1]}"></i>${ESCALA[n][0]}</span>`).join("");
+
+const traces = presentes.map(n => {
+  const cont = qs.map(q => R.respostas.filter(r => r.notas[q] === n).length);
+  const tot = qs.map(q => R.respostas.filter(r => r.notas[q] != null).length || 1);
+  return {
+    type: "bar", orientation: "h", name: ESCALA[n][0],
+    y: qs, x: cont.map((c, i) => c / tot[i]), customdata: cont,
+    marker: { color: ESCALA[n][1] },
+    hovertemplate: "%{y}<br>" + ESCALA[n][0] + ": <b>%{customdata}</b> (%{x:.0%})<extra></extra>",
+  };
+});
+Plotly.react("grafico", traces, {
+  barmode: "stack", bargap: 0.28, showlegend: false,
+  margin: { l: 20, r: 24, t: 20, b: 36 },
+  font: { family: FONTE, size: 13.5, color: COR.suave },
+  xaxis: { range: [0, 1], tickformat: ".0%", dtick: 0.2, gridcolor: "#ddd", griddash: "dot", fixedrange: true, zeroline: false },
+  yaxis: { autorange: "reversed", fixedrange: true, ticksuffix: "  ", automargin: true,
+           title: { text: "Questao", font: { size: 14, color: COR.texto }, standoff: 6 } },
+  paper_bgcolor: "#fff", plot_bgcolor: "#fff", separators: ",.",
+}, CONFIG);
+</script>
+{% endblock %}

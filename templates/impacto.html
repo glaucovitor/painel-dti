@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block conteudo %}
+<section class="cartao" id="cSlicerProjeto">
+  <h2>Projeto <span class="limpar" id="limpar">limpar seleção</span></h2>
+  <div class="slicer" id="slicer"></div>
+</section>
+
+<section class="kpi kpi-icone" style="grid-area:k1" id="k1"></section>
+<section class="kpi kpi-icone" style="grid-area:k2" id="k2"></section>
+<section class="kpi kpi-icone" style="grid-area:k3" id="k3"></section>
+<section class="kpi kpi-icone" style="grid-area:k4" id="k4"></section>
+
+<section class="cartao" id="cImpTabela">
+  <h2>Síntese da Avaliação de Impacto</h2>
+  <div class="tabela-wrap" id="tab"></div>
+</section>
+{% endblock %}
+
+{% block script %}
+<script>
+const IMP = window.DADOS.impacto;
+const W = 'viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"';
+const CATS = [
+  ["k1", "Excelente", "#1e9e3e", `<svg ${W}><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`],
+  ["k2", "Muito Bom", "#4e8a1c", `<svg viewBox="0 0 24 24" fill="#fff"><path d="M2 10h4v11H2zM8 21h9.2c.9 0 1.6-.6 1.8-1.4l1.9-7.2c.3-1.2-.6-2.4-1.9-2.4H14l.8-4c.2-1.1-.6-2-1.7-2-.6 0-1.1.3-1.4.8L8 10v11z"/></svg>`],
+  ["k3", "Bom", "#d9b300", `<svg ${W}><path d="M6 12h12"/></svg>`],
+  ["k4", "Regular", "#e8730c", `<svg ${W}><path d="M12 5v9"/><circle cx="12" cy="19" r=".6" fill="#fff"/></svg>`],
+];
+const categoria = a => {
+  const s = (a || "").toLowerCase().trim();
+  if (s.startsWith("excelente")) return "Excelente";
+  if (s.startsWith("muito bom")) return "Muito Bom";
+  if (s.startsWith("bom")) return "Bom";
+  if (s.startsWith("regular")) return "Regular";
+  return "";
+};
+
+const tab = tabela(document.getElementById("tab"), [
+  { campo: "projeto", titulo: "Projeto", largura: "95px" },
+  { campo: "dimensao", titulo: "Dimensão", largura: "240px" },
+  { campo: "achados", titulo: "Achados" },
+  { campo: "avaliacao", titulo: "Avaliação", largura: "270px" },
+], { campo: "dimensao", dir: 1 });
+
+function atualizar(sel) {
+  const linhas = IMP.filter(r => passa(sel, r.projeto));
+  CATS.forEach(([id, nome, cor, svg]) => {
+    const n = linhas.filter(r => categoria(r.avaliacao) === nome).length;
+    document.getElementById(id).innerHTML =
+      `<span class="bolinha" style="background:${cor}">${svg}</span>
+       <span class="txt"><span class="valor">${fmt(n)}</span><span class="legenda">${nome}</span></span>`;
+  });
+  tab.atualizar(linhas);
+}
+slicer(document.getElementById("slicer"), unicos(IMP, r => r.projeto), atualizar, document.getElementById("limpar"));
+atualizar(new Set());
+</script>
+{% endblock %}
